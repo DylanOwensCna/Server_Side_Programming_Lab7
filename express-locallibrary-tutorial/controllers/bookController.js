@@ -1,8 +1,8 @@
-const { body, validationResult } = require("express-validator");
 const Book = require("../models/book");
 const Author = require("../models/author");
 const Genre = require("../models/genre");
 const BookInstance = require("../models/bookinstance");
+const { body, validationResult } = require("express-validator");
 
 const async = require("async");
 
@@ -85,11 +85,6 @@ exports.book_detail = (req, res, next) => {
 };
 
 
-// // Display book create form on GET.
-// exports.book_create_get = (req, res) => {
-//   res.send("NOT IMPLEMENTED: Book create GET");
-// };
-
 // Display book create form on GET.
 exports.book_create_get = (req, res, next) => {
   // Get all authors and genres, which we can use for adding to our book.
@@ -114,12 +109,6 @@ exports.book_create_get = (req, res, next) => {
     }
   );
 };
-
-
-// // Handle book create on POST.
-// exports.book_create_post = (req, res) => {
-//   res.send("NOT IMPLEMENTED: Book create POST");
-// };
 
 // Handle book create on POST.
 exports.book_create_post = [
@@ -209,15 +198,63 @@ exports.book_create_post = [
   },
 ];
 
-
 // Display book delete form on GET.
-exports.book_delete_get = (req, res) => {
-  res.send("NOT IMPLEMENTED: Book delete GET");
+exports.book_delete_get = (req, res, next) => {
+  async.parallel(
+    {
+      book(callback) {
+        Book.findById(req.params.id).exec(callback);
+      },
+    },
+  (err, results) => {
+    if(err) {
+      return next(err);
+    }
+    if (results.book == null) {
+      // No results
+      res.redirect("/catalog/books");
+    }
+    // Successful, so render
+    res.render("book_delete", {
+      title: "Delete book",
+      book: results.book,
+    });
+  }
+  )
 };
 
 // Handle book delete on POST.
-exports.book_delete_post = (req, res) => {
-  res.send("NOT IMPLEMENTED: Book delete POST");
+exports.book_delete_post = (req, res, next) => {
+  async.parallel(
+    {
+      book(callback) {
+        Book.findById(req.body.bookid).exec(callback);
+      },
+    },
+    (err, results) => {
+      if (err) {
+        return next(err);
+      }
+      
+      // // Success
+      if (results.book.length > 0) {
+        // Book has books. Render in same way as for GET route.
+        res.render("book_delete", {
+          title: "Delete Book",
+          book: results.book,
+        // author_books: results.authors_books,
+        });
+      }
+      // Book has no books. Delete object and redirect to the list of authors.
+      Book.findByIdAndRemove(req.body.bookid, (err) => {
+        if (err) {
+          return next(err);
+        }
+        // Success - go to book list
+        res.redirect("/catalog/books");
+      });
+    }
+  );
 };
 
 // Display book update form on GET.
